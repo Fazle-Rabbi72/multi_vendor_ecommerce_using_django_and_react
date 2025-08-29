@@ -2,6 +2,10 @@ import React from "react";
 import { useState, useEffect } from "react";
 import apiInstance from "../../utils/axios";
 import { useParams } from "react-router-dom";
+import GetCurrentAddress from "../plugin/UserCountry";
+import UserData from "../plugin/UserData";
+import CardID from "../plugin/CardID";
+
 
 const ProductDetail = () => {
   const [product, setProduct] = useState({});
@@ -10,6 +14,20 @@ const ProductDetail = () => {
   const [images, setImages] = useState([]);
   const [color, setColor] = useState([]);
   const [size, setSize] = useState([]);
+  const [colorValue, setColorValue] = useState("No Color");
+  const [sizeValue, setSizeValue] = useState("No Size");
+  const [quantity, setQuantity] = useState(1);
+
+ const currentAddress = GetCurrentAddress();
+ const userData = UserData();
+ const cart_id=CardID();
+
+ console.log(cart_id);
+ 
+
+ 
+
+  
 
   useEffect(() => {
     apiInstance.get(`products/${params.slug}/`).then((res) => {
@@ -18,11 +36,43 @@ const ProductDetail = () => {
       setImages(res.data.gallery);
       setColor(res.data.color);
       setSize(res.data.size);
+
     });
   }, []);
-  console.log(size);
 
-  console.log(specifications);
+  const handleColorButtonClick = (event) => {
+    const colorNameInput = event.target
+      .closest(".color_button")
+      .parentNode.querySelector(".color_name");
+    setColorValue(colorNameInput.value);
+  };
+
+  const handleSizeButtonClick = (event) => {
+    const sizeNameInput = event.target
+      .closest(".size_button")
+      .parentNode.querySelector(".size_name");
+    setSizeValue(sizeNameInput.value);
+  };
+
+  const handleQuantityChange = (event) => {
+    setQuantity(event.target.value);
+  };
+  
+  const handleAddToCart = () => {
+    console.log("product id:",product.id)
+    console.log("product price:",product.price)
+    console.log("shipping Amount:",product.shipping_amount)
+    console.log("product price:",product.price)
+    console.log("quantity:",quantity)
+    console.log("color:",colorValue)
+    console.log("size:",sizeValue)
+    console.log("country:",currentAddress.country)
+    console.log("user_id:",userData?.user_id)
+  }
+    
+      
+      
+  
 
   return (
     <main className=" mb-4 mt-4">
@@ -51,21 +101,21 @@ const ProductDetail = () => {
                   </div>
                 </div>
                 <div className="mt-3 d-flex">
-                    {images.map((i,index) => (
-                      <div className="p-3" key={index}>
-                        <img
-                          src={i.image}
-                          style={{
-                            width: 100,
-                            height: 100,
-                            objectFit: "cover",
-                            borderRadius: 10,
-                          }}
-                          alt="Gallery image 1"
-                          className="ecomarce-gallery-sub-img active w-100 rounded-4"
-                        />
-                      </div>
-                    ))}
+                  {images.map((i, index) => (
+                    <div className="p-3" key={index}>
+                      <img
+                        src={i.image}
+                        style={{
+                          width: 100,
+                          height: 100,
+                          objectFit: "cover",
+                          borderRadius: 10,
+                        }}
+                        alt="Gallery image 1"
+                        className="ecomarce-gallery-sub-img active w-100 rounded-4"
+                      />
+                    </div>
+                  ))}
                 </div>
               </div>
               {/* Gallery */}
@@ -150,35 +200,79 @@ const ProductDetail = () => {
                           type="number"
                           id="typeNumber"
                           className="form-control"
-                          defaultValue={1}
+                          value={quantity}
                           min={1}
+                          onChange={handleQuantityChange}
                         />
                       </div>
                     </div>
                     {/* size */}
-                    
-                    <div className="col-md-6 mb-4">
-                      <div className="">
-                        {size?.map((s, index) => (
-                            
-                        <button className="btn btn-secondary ms-2" key={index} >{s.name}</button>
-                        ))}
-                       
-                      </div>
-                    </div>
-                  {/* Colors */}
-                    <div className="col-md-6 mb-4">
-                      <div className="">
-                        {color?.map((c, index) => (   
-                        <button className="btn  p-3 ms-2" style={{backgroundColor:`${c.color_code}`}} key={index}></button>
-                        ))}
-                      </div>
-                    </div>
+                    {size.length > 0 && (
+                      <>
+                        <h6>
+                          Size: <span>{sizeValue}</span>
+                        </h6>
+                        <div className="col-md-6 mb-4">
+                          <div className="d-flex">
+                            {size?.map((s, index) => (
+                              <div key={index}>
+                                <input
+                                  type="hidden"
+                                  className="size_name"
+                                  value={s.name}
+                                  name=""
+                                  id=""
+                                />
+                                <button
+                                  className="btn btn-secondary p-3 m-1 size_button"
+                                  type="button"
+                                  onClick={handleSizeButtonClick}
+                                  
+                                >
+                                  {s.name}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {/* Colors */}
+                    {color.length > 0 && (
+                      <>
+                        <h6>
+                          Color: <span>{colorValue}</span>
+                        </h6>
+                        <div className="col-md-6 mb-4">
+                          <div className="d-flex">
+                            {color?.map((c, index) => (
+                              <div key={index}>
+                                <input
+                                  type="hidden"
+                                  className="color_name"
+                                  value={c.name}
+                                  name=""
+                                  id=""
+                                />
+                                <button
+                                  className="btn  p-3 m-1 color_button"
+                                  type="button"
+                                  onClick={handleColorButtonClick}
+                                  style={{ backgroundColor: `${c.color_code}` }}
+                                  key={index}
+                                ></button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                   {/* Add to cart */}
                   <button
                     type="button"
                     className="btn btn-primary btn-rounded me-2"
+                    onClick={handleAddToCart}
                   >
                     <i className="fas fa-cart-plus me-2"></i>
                     Add to cart
