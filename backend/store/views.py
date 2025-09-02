@@ -52,11 +52,12 @@ class CartAPIView(generics.ListCreateAPIView):
         else:
             user=None
         
-        tax=Tax.objects.get(country=country).first()
+        tax = Tax.objects.filter(country=country).first()
         if tax:
-            tax_rate=tax.rate/100
+            tax_rate = tax.rate / 100
         else:
-            tax_rate=0
+            tax_rate = 0
+            
         cart=Cart.objects.filter(cart_id=cart_id, product=product).first()
         if cart:
             cart.product=product
@@ -72,7 +73,7 @@ class CartAPIView(generics.ListCreateAPIView):
             cart.cart_id=cart_id
             
             service_fee_percentage=20/100
-            cart.service_fee=service_fee_percentage*cart.sub_total
+            cart.service_fee=Decimal(service_fee_percentage)*cart.sub_total
             
             cart.total=cart.sub_total+cart.shipping_amount+cart.service_fee+cart.tax_fee
             
@@ -94,7 +95,7 @@ class CartAPIView(generics.ListCreateAPIView):
             cart.cart_id=cart_id
             
             service_fee_percentage=20/100
-            cart.service_fee=service_fee_percentage*cart.sub_total
+            cart.service_fee=Decimal(service_fee_percentage)*cart.sub_total
             
             cart.total=cart.sub_total+cart.shipping_amount+cart.service_fee+cart.tax_fee
             

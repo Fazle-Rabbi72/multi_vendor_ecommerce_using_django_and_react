@@ -41,6 +41,7 @@ const Products = () => {
                           height: "250px",
                           width: "100%",
                           objectFit: "cover",
+                          
                         }}
                         alt=""
                       />
@@ -74,51 +75,36 @@ const Products = () => {
                           className="dropdown-menu"
                           aria-labelledby="dropdownMenuClickable"
                         >
+                          {p.size?.length > 0 &&
                           <div className="d-flex flex-column">
                             <li className="p-1">
                               <b>Size</b>: XL
                             </li>
+                            
                             <div className="p-1 mt-0 pt-0 d-flex flex-wrap">
-                              <li>
+                              {p.size?.map((s, index) => (  
+                                <li key={index}>
                                 <button className="btn btn-secondary btn-sm m-2 mb-1">
-                                  XXL
+                                  {s.name}
                                 </button>
                               </li>
-                              <li>
-                                <button className="btn btn-secondary btn-sm m-2 mb-1">
-                                  XXL
-                                </button>
-                              </li>
-                              <li>
-                                <button className="btn btn-secondary btn-sm m-2 mb-1">
-                                  XXL
-                                </button>
-                              </li>
+                              ))}
                             </div>
                           </div>
+                            }
                           <div className="d-flex flex-column mt-3">
                             <li className="p-1">
                               <b>Color</b>: Red
                             </li>
                             <div className="p-1 mt-0 pt-0 d-flex flex-wrap">
-                              <li>
+                              {p.color?.map((c, index) => (
+                               <li>
                                 <button
-                                  className="btn btn-secondary btn-sm m-2 mb-1"
-                                  style={{ backgroundColor: "blue" }}
+                                  className="btn  btn-sm me-2 mb-1 p-3"
+                                  style={{ backgroundColor: c.name }}
                                 ></button>
-                              </li>
-                              <li>
-                                <button
-                                  className="btn btn-secondary btn-sm m-2 mb-1"
-                                  style={{ backgroundColor: "green" }}
-                                ></button>
-                              </li>
-                              <li>
-                                <button
-                                  className="btn btn-secondary btn-sm m-2 mb-1"
-                                  style={{ backgroundColor: "yellow" }}
-                                ></button>
-                              </li>
+                              </li> 
+                              ))}
                             </div>
                           </div>
                           <div className="d-flex mt-3 p-1">

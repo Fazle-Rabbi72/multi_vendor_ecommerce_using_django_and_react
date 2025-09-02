@@ -6,7 +6,6 @@ import GetCurrentAddress from "../plugin/UserCountry";
 import UserData from "../plugin/UserData";
 import CardID from "../plugin/CardID";
 
-
 const ProductDetail = () => {
   const [product, setProduct] = useState({});
   const params = useParams();
@@ -18,16 +17,11 @@ const ProductDetail = () => {
   const [sizeValue, setSizeValue] = useState("No Size");
   const [quantity, setQuantity] = useState(1);
 
- const currentAddress = GetCurrentAddress();
- const userData = UserData();
- const cart_id=CardID();
+  const currentAddress = GetCurrentAddress();
+  const userData = UserData();
+  const cart_id = CardID();
 
- console.log(cart_id);
- 
-
- 
-
-  
+  console.log(cart_id);
 
   useEffect(() => {
     apiInstance.get(`products/${params.slug}/`).then((res) => {
@@ -36,7 +30,6 @@ const ProductDetail = () => {
       setImages(res.data.gallery);
       setColor(res.data.color);
       setSize(res.data.size);
-
     });
   }, []);
 
@@ -57,22 +50,36 @@ const ProductDetail = () => {
   const handleQuantityChange = (event) => {
     setQuantity(event.target.value);
   };
-  
-  const handleAddToCart = () => {
-    console.log("product id:",product.id)
-    console.log("product price:",product.price)
-    console.log("shipping Amount:",product.shipping_amount)
-    console.log("product price:",product.price)
-    console.log("quantity:",quantity)
-    console.log("color:",colorValue)
-    console.log("size:",sizeValue)
-    console.log("country:",currentAddress.country)
-    console.log("user_id:",userData?.user_id)
-  }
-    
-      
-      
-  
+
+  const handleAddToCart = async () => {
+    // console.log("product id:", product.id);
+    // console.log("product price:", product.price);
+    // console.log("shipping Amount:", product.shipping_amount);
+    // console.log("product price:", product.price);
+    // console.log("quantity:", quantity);
+    // console.log("color:", colorValue);
+    // console.log("size:", sizeValue);
+    // console.log("country:", currentAddress.country);
+    // console.log("user_id:", userData?.user_id);
+
+    try {
+      const formData = new FormData();
+      formData.append("product_id", product.id);
+      formData.append("user_id", userData?.user_id);
+      formData.append("quantity", quantity);
+      formData.append("price", product.price);
+      formData.append("shipping_amount", product.shipping_amount);
+      formData.append("country", currentAddress.country);
+      formData.append("size", sizeValue);
+      formData.append("color", colorValue);
+      formData.append("cart_id", cart_id);
+
+      const response = await apiInstance.post("cart-view/", formData);
+      console.log(response.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   return (
     <main className=" mb-4 mt-4">
@@ -227,7 +234,6 @@ const ProductDetail = () => {
                                   className="btn btn-secondary p-3 m-1 size_button"
                                   type="button"
                                   onClick={handleSizeButtonClick}
-                                  
                                 >
                                   {s.name}
                                 </button>
