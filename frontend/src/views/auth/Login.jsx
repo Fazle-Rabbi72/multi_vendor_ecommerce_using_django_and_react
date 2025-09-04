@@ -10,9 +10,10 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
 
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  
 
   useEffect(() => {
-    if (isLoggedIn()) {
+    if (isLoggedIn) {
       navigate("/");
     }
   }, [isLoggedIn, navigate]);
@@ -29,8 +30,8 @@ const Login = () => {
     if (error) {
       alert(error);
     } else {
-      navigate("/");
       resetForm();
+      window.location.href = "/";
     }
     setLoading(false);
   };

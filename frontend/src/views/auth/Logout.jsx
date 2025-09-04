@@ -7,6 +7,7 @@ const Logout = () => {
 
   useEffect(() => {
     logout(); // clear token/session
+    window.location.href = "/";
   }, [navigate]);
 
   return (

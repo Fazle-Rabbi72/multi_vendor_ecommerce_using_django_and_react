@@ -3,17 +3,18 @@ import { useAuthStore } from "../../store/auth";
 import { Link } from "react-router-dom";
 
 const Dashboard = () => {
-  const loggedIn = useAuthStore((state) => state.isLoggedIn());
-  const currentUser = useAuthStore((state) => state.user());
+  const { isLoggedIn, user, hydrateUser } = useAuthStore();
+
+  
 
   return (
     <div className="container py-5">
-      {loggedIn ? (
+      {isLoggedIn ? (
         <div className="card shadow-lg mx-auto" style={{ maxWidth: "500px" }}>
           <div className="card-body">
             <h3 className="card-title text-center text-primary mb-4">Dashboard</h3>
-            <p><strong>Name:</strong> {currentUser.full_name}</p>
-            <p><strong>Email:</strong> {currentUser.email}</p>
+            <p><strong>Name:</strong> {user.full_name}</p>
+            <p><strong>Email:</strong> {user.email}</p>
             <div className="text-center mt-4">
               <Link to="/logout" className="btn btn-danger">
                 Logout

@@ -5,6 +5,17 @@ import { useParams } from "react-router-dom";
 import GetCurrentAddress from "../plugin/UserCountry";
 import UserData from "../plugin/UserData";
 import CardID from "../plugin/CardID";
+import Swal from "sweetalert2";
+
+
+
+const toast = Swal.mixin({
+  toast: true,
+  position: "top-center",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+});
 
 const ProductDetail = () => {
   const [product, setProduct] = useState({});
@@ -75,9 +86,16 @@ const ProductDetail = () => {
       formData.append("cart_id", cart_id);
 
       const response = await apiInstance.post("cart-view/", formData);
-      console.log(response.data);
+
+      toast.fire({
+        icon: "success",
+        title: response.data.message,
+      })
     } catch (error) {
-      console.log(error);
+      toast.fire({
+        icon: "error",
+        title: error.response.data.message,
+      })
     }
   };
 

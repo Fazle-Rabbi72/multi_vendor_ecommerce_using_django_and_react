@@ -2,6 +2,15 @@ import  { useAuthStore } from "../store/auth";
 import axios from "./axios";
 import {jwtDecode}  from "jwt-decode";
 import cookies from "js-cookie";
+import Swal from "sweetalert2";
+
+const toast = Swal.mixin({
+  toast: true,
+  position: "top",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+});
 
 
 export const login =async(email,password)=>{
@@ -14,15 +23,20 @@ export const login =async(email,password)=>{
         if(status===200){
             setAuthUser(data.access, data.refresh)
         }
-        // Alert("User Logged In Successfully")
+        toast.fire({
+            icon: "success",
+            title: "User Logged In Successfully",
+        })
+        
         return {data, error:null}
 
 
     } catch (error) {
-      return {
-        data: null,
-        error: error.response.data?.detail || "Something went wrong",
-      } 
+         toast.fire({
+            icon: "error",
+            title: error.response.data?.detail || "Something went wrong",
+        })
+        
     }
 }
 
@@ -38,11 +52,18 @@ export const register =async(full_name,email,phone,password,password2)=>{
         })
 
         await login(email,password)
-        // Alert("User Registered Successfully")
+        toast.fire({
+            icon: "success",
+            title: "User Registered Successfully",
+        })
         return {data, error:null}
 
 
     } catch (error) {
+        toast.fire({
+            icon: "error",
+            title: error.response.data?.detail || "Something went wrong",
+        })
       return {
         data: null,
         error: error.response.data?.detail || "Something went wrong",
@@ -55,7 +76,10 @@ export const logout =()=>{
     cookies.remove("access_token")
     cookies.remove("refresh_token")
     useAuthStore.getState().setUser(null)
-    // Alert("User Logged Out Successfully")
+    toast.fire({
+        icon: "success",
+        title: "User Logged Out Successfully",
+    })
 }
 
 export const setUser = async()=>{

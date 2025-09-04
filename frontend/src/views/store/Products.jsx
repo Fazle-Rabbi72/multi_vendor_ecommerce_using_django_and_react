@@ -2,10 +2,63 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import apiInstance from "../../utils/axios";
+import GetCurrentAddress from "../plugin/UserCountry";
+import UserData from "../plugin/UserData";
+import CardID from "../plugin/CardID";
+import Swal from "sweetalert2";
+
+const toast = Swal.mixin({
+  toast: true,
+  position: "top-center",
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+});
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState([]);
+
+  const [colorValue, setColorValue] = useState("No Color");
+  const [sizeValue, setSizeValue] = useState("No Size");
+  const [quantity, setQuantity] = useState(1);
+
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedColors, setSelectedColors] = useState({});
+  const [selectedSizes, setSelectedSizes] = useState({});
+
+  const currentAddress = GetCurrentAddress();
+  const userData = UserData();
+  const cart_id = CardID();
+
+  const handleColorButtonClick = (event,product_id, color_name) => {
+      setColorValue(color_name);
+      setSelectedProduct(product_id);
+
+      setSelectedColors((prevSelectedColors) =>({
+        ...prevSelectedColors,
+        [product_id]: color_name
+      }));  
+  };
+  
+
+  
+  const handleSizeButtonClick = (event,product_id, size_name) => {
+      setSizeValue(size_name);
+      setSelectedProduct(product_id);
+
+      setSelectedSizes((prevSelectedSizes) => ({
+        ...prevSelectedSizes,
+        [product_id]: size_name
+      }));
+  };
+
+  const handleQuantityChange = (event, product_id) => {
+    setQuantity(event.target.value);
+    setSelectedProduct(product_id);
+    console.log(quantity);
+    
+  };
 
   useEffect(() => {
     apiInstance.get("products/").then((res) => {
@@ -18,7 +71,30 @@ const Products = () => {
       setCategory(res.data)
     })
   },[])
-  console.log(category);
+
+  const handleAddToCart= async (product_id,price,shipping_amount)=>{
+    const formData = new FormData();
+
+    formData.append("product_id", product_id);
+    formData.append("user_id", userData?.user_id);
+    formData.append("quantity", quantity);
+    formData.append("price", price);
+    formData.append("shipping_amount",shipping_amount);
+    formData.append("country", currentAddress.country);
+    formData.append("size", sizeValue);
+    formData.append("color", colorValue);
+    formData.append("cart_id", cart_id);
+    
+    const response =await apiInstance.post("cart-view/", formData);
+    console.log(response.data)
+
+    toast.fire({
+      icon: "success",
+      title: response.data.message,
+    });
+
+  }
+  
 
   return (
     <>
@@ -74,17 +150,29 @@ const Products = () => {
                         <ul
                           className="dropdown-menu"
                           aria-labelledby="dropdownMenuClickable"
+
                         >
+                          <div className="d-flex flex-column">
+                            <li className="p-1">
+                              <b>Quantity</b>
+                            </li>
+                            
+                            <div className="p-1 mt-0 pt-0 d-flex flex-wrap">
+                              <li>
+                                <input  onChange={(e) => handleQuantityChange(e, p.id)} className="form-control" type="number" />
+                              </li>
+                            </div>
+                          </div>
                           {p.size?.length > 0 &&
                           <div className="d-flex flex-column">
                             <li className="p-1">
-                              <b>Size</b>: XL
+                              <b>Size</b>: {selectedSizes[p.id] || "No Size"}
                             </li>
                             
                             <div className="p-1 mt-0 pt-0 d-flex flex-wrap">
                               {p.size?.map((s, index) => (  
                                 <li key={index}>
-                                <button className="btn btn-secondary btn-sm m-2 mb-1">
+                                <button onClick={(e) => handleSizeButtonClick(e,p.id, s.name)} className="btn btn-secondary btn-sm m-2 mb-1">
                                   {s.name}
                                 </button>
                               </li>
@@ -92,25 +180,29 @@ const Products = () => {
                             </div>
                           </div>
                             }
+                            {p.color?.length > 0 &&
                           <div className="d-flex flex-column mt-3">
                             <li className="p-1">
-                              <b>Color</b>: Red
+                              <b>Color</b>: {selectedColors[p.id] || "No Color"}
                             </li>
                             <div className="p-1 mt-0 pt-0 d-flex flex-wrap">
                               {p.color?.map((c, index) => (
-                               <li>
+                                <li key={index}>
                                 <button
                                   className="btn  btn-sm me-2 mb-1 p-3"
-                                  style={{ backgroundColor: c.name }}
-                                ></button>
+                                  style={{ backgroundColor: `${c.color_code}` }}
+                                  onClick={(e) => handleColorButtonClick(e,p.id, c.name)}
+                                  ></button>
                               </li> 
                               ))}
                             </div>
                           </div>
+                          }
                           <div className="d-flex mt-3 p-1">
                             <button
                               type="button"
                               className="btn btn-primary me-1 mb-1"
+                              onClick={() => handleAddToCart( p.id ,p.price,p.shipping_amount)}
                             >
                               <i className="fa-solid fa-cart-shopping"></i>
                             </button>

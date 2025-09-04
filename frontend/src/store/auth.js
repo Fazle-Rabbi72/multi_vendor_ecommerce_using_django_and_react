@@ -5,37 +5,33 @@ import {jwtDecode} from "jwt-decode";
 
 const useAuthStore = create((set, get) => ({
   allUserData: null,
-  loading: false,
+  loading: true,
 
-  user: () => get().allUserData,
-
-  setUser: (user) => {
-    set({ allUserData: user });
-  },
-
+  setUser: (user) => set({ allUserData: user }),
   setLoading: (loading) => set({ loading }),
 
-  isLoggedIn: () => get().allUserData !== null,
+  
+  isLoggedIn: false, 
+  user: null,
 
-  // 🔹 reload দিলে cookie থেকে user restore
   hydrateUser: () => {
     const accessToken = cookies.get("access_token");
     if (!accessToken) {
-      set({ allUserData: null });
+      set({ allUserData: null, isLoggedIn: false, user: null , loading: false});
       return;
     }
     try {
       const decoded = jwtDecode(accessToken);
-      set({ allUserData: decoded });
+      set({ allUserData: decoded, isLoggedIn: true, user: decoded, loading: false });
     } catch (err) {
       console.error("Invalid token", err);
-      set({ allUserData: null });
+      set({ allUserData: null, isLoggedIn: false, user: null , loading: false});
     }
   },
 }));
 
-if (import.meta.env.DEV) {
-  mountStoreDevtool("store", useAuthStore);
+if (process.env.NODE_ENV === "development") {
+  mountStoreDevtool("Auth Store", useAuthStore);
 }
 
-export { useAuthStore };
+export {useAuthStore};

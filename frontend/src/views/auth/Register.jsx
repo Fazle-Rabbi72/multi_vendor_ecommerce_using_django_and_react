@@ -16,7 +16,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isLoggedIn()) {
+    if (isLoggedIn) {
       navigate("/");
     }
   }, []);
