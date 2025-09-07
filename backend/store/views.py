@@ -3,7 +3,7 @@ from django.conf import settings
 
 from store.models import Category,Product,Tax,Color,Size,Gallery,Specification,ProductFaq,Review,Wishlist,Cart,CartOrder,CartOrderItem,Coupon,Notification
 from userauths.models import User
-from store.serializers import ProductSerializer,CategorySerializer,CartSerializer,CartOrderSerializer,CouponSerializer,NotificationSerializer
+from store.serializers import ProductSerializer,CategorySerializer,CartSerializer,CartOrderSerializer,CouponSerializer,NotificationSerializer,ReviewSerializer
 
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -435,4 +435,44 @@ class PaymentSuccessView(generics.CreateAPIView):
        else:
            session= None
 
-       
+class ReviewListAPIView(generics.ListCreateAPIView):
+    queryset = Review.objects.all()
+    serializer_class= ReviewSerializer
+    permission_classes= [AllowAny]
+    
+    def get_queryset(self):
+        product_id=self.kwargs['product_id']
+        
+        product= Product.objects.get(id=product_id)
+        reviews= Review.objects.filter(product=product)
+        
+        return reviews       
+    
+    def create(self, request, *args, **kwargs):
+        payload=request.data
+        
+        user_id= payload['user_id']
+        product_id= payload['product_id']
+        rating = payload['rating']
+        review = payload['review']
+        
+        user= User.objects.get(id=user_id)
+        product= Product.objects.get(id=product_id)
+        
+        Review.objects.create(
+           user=user,
+           product= product,
+           rating= rating,
+           review= review 
+        )
+        
+        return Response({"message":"Review created successfully"}, status=status.HTTP_200_OK)
+
+class SearchProductAPIView(generics.ListCreateAPIView):
+    serializer_class = ProductSerializer
+    permission_classes= [AllowAny]
+
+    def get_queryset(self):
+        query=self.request.GET.get("query")
+        products=Product.objects.filter(status="published", title__icontains=query)
+        return products

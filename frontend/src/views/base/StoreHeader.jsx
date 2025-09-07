@@ -1,14 +1,34 @@
-import React, { useEffect } from "react";
+import React, { useEffect ,useState,useContext } from "react";
 import { useAuthStore } from "../../store/auth";
-import { Link } from "react-router-dom";
+import { Link ,useNavigate} from "react-router-dom";
+import { CartContext } from "../plugin/Context";
 
 const StoreHeader = () => {
   const { isLoggedIn, user, hydrateUser, loading } = useAuthStore();
+
+  const [search, setSearch] =useState("")
   
   // Page load এ user data hydrate
   useEffect(() => {
     hydrateUser();
   }, [hydrateUser]);
+
+  const handleSearchChange =(event)=>{
+    setSearch(event.target.value)
+    
+  }
+  const navigate= useNavigate()
+
+  const handleSearchSubmit=()=>{
+    navigate(`/search?query=${search}`)
+
+  }
+
+  const cartCount= useContext(CartContext)
+  
+  
+
+
   if (!loading)
   {
     return (
@@ -80,10 +100,12 @@ const StoreHeader = () => {
                   className="form-control rounded-start-pill"
                   placeholder="Search products..."
                   aria-label="Search"
+                  onChange={handleSearchChange}
                 />
                 <button
                   className="btn btn-warning rounded-end-pill"
-                  type="submit"
+                  type="button"
+                  onClick={handleSearchSubmit}
                 >
                   <i className="fa-solid fa-magnifying-glass"></i>
                 </button>
@@ -96,7 +118,7 @@ const StoreHeader = () => {
               <Link to={"/cart/"} className="btn btn-outline-light position-relative">
                 <i className="fa-solid fa-cart-shopping fa-lg"></i>
                 <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                  3
+                  {cartCount}
                 </span>
               </Link>
 

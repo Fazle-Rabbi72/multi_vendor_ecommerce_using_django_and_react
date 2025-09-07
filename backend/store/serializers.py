@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from store.models import Category,Product,Color,Size,Gallery,Specification,ProductFaq,Review,Wishlist,Cart,CartOrder,CartOrderItem,Coupon,Notification
 from vendor.models import Vendor
+from userauths.serializer import ProfileSerializer
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model=Category
@@ -39,10 +40,11 @@ class ProductFaqSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth=3
 
-class ReviewSerializer(serializers.ModelSerializer):    
+class ReviewSerializer(serializers.ModelSerializer): 
+    profile= ProfileSerializer()  
     class Meta:
         model=Review
-        fields='__all__'
+        fields=["id","review","rating","user","profile","date"]
     
     def __init__(self, *args, **kwargs):
         super(ReviewSerializer, self).__init__(*args, **kwargs)

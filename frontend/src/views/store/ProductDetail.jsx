@@ -1,17 +1,17 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useReducer } from "react";
+import { useState, useEffect,useContext } from "react";
 import apiInstance from "../../utils/axios";
 import { useParams } from "react-router-dom";
 import GetCurrentAddress from "../plugin/UserCountry";
 import UserData from "../plugin/UserData";
 import CardID from "../plugin/CardID";
 import Swal from "sweetalert2";
-
-
+import moment from 'moment'
+import { CartContext } from "../plugin/Context";
 
 const toast = Swal.mixin({
   toast: true,
-  position: "top-center",
+  position: "top",
   showConfirmButton: false,
   timer: 3000,
   timerProgressBar: true,
@@ -28,11 +28,16 @@ const ProductDetail = () => {
   const [sizeValue, setSizeValue] = useState("No Size");
   const [quantity, setQuantity] = useState(1);
 
+  const [reviews, setReviews] = useState([]);
+  const [createReview, setCreateReview] =useState({
+    user_id: 0, product_id:product?.id, review: "",rating: 0
+  })
+
   const currentAddress = GetCurrentAddress();
   const userData = UserData();
   const cart_id = CardID();
 
-  console.log(cart_id);
+  const [cartCount, setCartCount] =useContext(CartContext)
 
   useEffect(() => {
     apiInstance.get(`products/${params.slug}/`).then((res) => {
@@ -63,16 +68,6 @@ const ProductDetail = () => {
   };
 
   const handleAddToCart = async () => {
-    // console.log("product id:", product.id);
-    // console.log("product price:", product.price);
-    // console.log("shipping Amount:", product.shipping_amount);
-    // console.log("product price:", product.price);
-    // console.log("quantity:", quantity);
-    // console.log("color:", colorValue);
-    // console.log("size:", sizeValue);
-    // console.log("country:", currentAddress.country);
-    // console.log("user_id:", userData?.user_id);
-
     try {
       const formData = new FormData();
       formData.append("product_id", product.id);
@@ -86,18 +81,59 @@ const ProductDetail = () => {
       formData.append("cart_id", cart_id);
 
       const response = await apiInstance.post("cart-view/", formData);
+      const url = userData
+      ? `/cart-list/${cart_id}/${userData?.user_id}/`
+      : `/cart-list/${cart_id}/`;
+
+      apiInstance.get(url).then((res)=>{
+        setCartCount(res.data.length)})
 
       toast.fire({
         icon: "success",
         title: response.data.message,
-      })
+      });
     } catch (error) {
       toast.fire({
         icon: "error",
         title: error.response.data.message,
-      })
+      });
     }
   };
+
+  const fetchReviewData = async () => {
+    if (product) {
+      await apiInstance.get(`reviews/${product?.id}/`).then((res) => {
+        setReviews(res.data);
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchReviewData();
+  }, [product]);
+
+
+  const handleReviewChange = (event)=>{
+      setCreateReview({
+        ...createReview,
+        [event.target.name]: event.target.value
+      })
+      
+  }
+
+  const handleReviewSubmit =(e)=>{
+    e.preventDefault()
+    const formdata= new FormData()
+    formdata.append("user_id", userData?.user_id)
+    formdata.append("product_id",product?.id)
+    formdata.append("rating",createReview.rating)
+    formdata.append("review",createReview.review)
+
+    apiInstance.post(`reviews/${product?.id}/`,formdata).then((res)=>{
+      fetchReviewData();
+    })
+
+  }
 
   return (
     <main className=" mb-4 mt-4">
@@ -400,7 +436,107 @@ const ProductDetail = () => {
                 <p>Vendor: ABC Fashion House</p>
               </div>
               <div className="tab-pane fade" id="review" role="tabpanel">
-                <p>⭐⭐⭐⭐⭐ - Great Quality!</p>
+                <div className="container mt-5">
+                  <div className="row">
+                    {/* 1st column */}
+                    <div className="col-md-6">
+                      <h2>Create a New Review</h2>
+                      <form onSubmit={handleReviewSubmit}>
+                        <div className="mb-3">
+                          <label htmlFor="username" className="form-label">
+                            Rating
+                          </label>
+                          <select name="rating" className="form-select" onChange={handleReviewChange} id="">
+                            <option value="1">1 Star</option>
+                            <option value="2">2 Star</option>
+                            <option value="3">3 Star</option>
+                            <option value="4">4 Star</option>
+                            <option value="5">5 Star</option>
+                          </select>
+                        </div>
+                        <div className="mb-3">
+                          <label htmlFor="reviewText" className="form-label">
+                            {" "}
+                            Review
+                          </label>
+                          <textarea
+                            name="review"
+                            id="reviewText"
+                            className="form-control"
+                            rows={4}
+                            placeholder="Write your review"
+                            value={createReview.review}
+                            onChange={handleReviewChange}
+                          ></textarea>
+                        </div>
+                        <button type="submit" className="btn btn-primary">
+                          Submit Review
+                        </button>
+                      </form>
+                    </div>
+                    {/* 2nd column */}
+                    <div className="col-md-6">
+                      <h2>Existing Reviews</h2>
+                      <div className="card mb-3">
+                        {reviews.map((r, index) => (
+                          <div className="row g-0" key={index}>
+                            <div className="col-md-3">
+                              <img
+                                src={r.profile.image}
+                                alt="User Image"
+                                className="img-fluid"
+                              />
+                            </div>
+                            <div className="col-md-9">
+                              <div className="card-body">
+                                <h5 className="card-title">{r.profile.full_name}</h5>
+                                <p className="card-text">{moment(r.date).format("MMM d, YYYY")}</p>
+                                <p className="card-text">
+                                  {" "}
+                                 {r.review} <br />
+                                 {r.rating ===1 &&
+                                  <i className="fas fa-star"> </i>
+                                 }
+                                 {r.rating ===2 &&
+                                  <>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  </>
+                                 }
+                                 {r.rating ===3 &&
+                                  <>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  </>
+                                 }
+                                 {r.rating ===4 &&
+                                  <>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  </>
+                                 }
+                                 {r.rating ===5 &&
+                                  <>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  <i className="fas fa-star"> </i>
+                                  </>
+                                 }
+                                
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="tab-pane fade" id="qa" role="tabpanel">
                 <p>

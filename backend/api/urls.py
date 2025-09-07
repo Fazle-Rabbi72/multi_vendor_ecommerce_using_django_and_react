@@ -25,9 +25,12 @@ urlpatterns =[
     path('create-order/',store_views.CreateOrderAPIView.as_view()),
     path('checkout/<order_oid>/',store_views.CheckoutAPIView.as_view()),
     path('coupon/',store_views.CouponAPIView.as_view()),
+    path('reviews/<int:product_id>/' ,store_views.ReviewListAPIView.as_view()),
+    path('search/' ,store_views.SearchProductAPIView.as_view()),
     
     #Payment Endpoints
     path('stripe-checkout/<str:order_oid>/',store_views.StripeCheckoutView.as_view()),
-    path('payment-success/<str:order_oid>/',store_views.PaymentSuccessView.as_view()),  
+    path('payment-success/<str:order_oid>/',store_views.PaymentSuccessView.as_view()),
+     
     
 ]
