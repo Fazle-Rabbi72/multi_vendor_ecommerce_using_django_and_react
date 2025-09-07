@@ -184,12 +184,17 @@ class CartOrder(models.Model):
     state=models.CharField(max_length=1000,null=True,blank=True)
     country=models.CharField(max_length=1000,null=True,blank=True)
     
+    stripe_session_id=models.CharField(max_length=1000,null=True,blank=True)
+    
     oid=ShortUUIDField(unique=True, length=10, alphabet="abcdefg12345")
     date=models.DateTimeField(auto_now_add=True)
     
     
     def __str__(self):
         return self.oid
+    
+    def orderitem(self):
+        return CartOrderItem.objects.filter(order=self)
     
 class CartOrderItem(models.Model):
     order=models.ForeignKey(CartOrder, on_delete=models.CASCADE)
@@ -209,6 +214,7 @@ class CartOrderItem(models.Model):
     color=models.CharField(max_length=100,null=True,blank=True)
     
     #Coupons
+    coupon=models.ManyToManyField("store.Coupon",blank=True)
     initial_total=models.DecimalField(max_digits=12,decimal_places=2,default=0.00)
     saved=models.DecimalField(max_digits=12,decimal_places=2,default=0.00)
     oid=ShortUUIDField(unique=True, length=10, alphabet="abcdefg12345")
@@ -270,9 +276,9 @@ class Wishlist(models.Model):
     def __str__(self):
         return self.product.title
 class Notification(models.Model):
-    user=models.ForeignKey(User, on_delete=models.CASCADE)
+    user=models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
     order=models.ForeignKey(CartOrder, on_delete=models.SET_NULL,null=True,blank=True)
-    vendor=models.ForeignKey(Vendor, on_delete=models.CASCADE)
+    vendor=models.ForeignKey(Vendor, on_delete=models.SET_NULL,null=True,blank=True)
     order_item=models.ForeignKey(CartOrderItem, on_delete=models.SET_NULL,null=True,blank=True)
     seen=models.BooleanField(default=False)
     date=models.DateTimeField(auto_now_add=True)

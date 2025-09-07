@@ -472,19 +472,7 @@ const Cart = () => {
                     </button>
                   </section>
                   {/* end section summary */}
-                  <section className="shadow card p-4 rounded-2">
-                    <h5>Apply Promo Code</h5>
-                    <div className="d-flex align-items-center">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Promo Code"
-                      />
-                      <button type="button" className="btn btn-success ms-2">
-                        Apply
-                      </button>
-                    </div>
-                  </section>
+                  
                 </div>
               </div>
             </section>

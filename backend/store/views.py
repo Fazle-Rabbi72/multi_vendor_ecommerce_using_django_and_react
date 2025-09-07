@@ -1,13 +1,25 @@
-from django.shortcuts import render
+from django.shortcuts import render,redirect
+from django.conf import settings
 
 from store.models import Category,Product,Tax,Color,Size,Gallery,Specification,ProductFaq,Review,Wishlist,Cart,CartOrder,CartOrderItem,Coupon,Notification
 from userauths.models import User
-from store.serializers import ProductSerializer,CategorySerializer,CartSerializer,CartOrderSerializer
+from store.serializers import ProductSerializer,CategorySerializer,CartSerializer,CartOrderSerializer,CouponSerializer,NotificationSerializer
 
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from decimal import Decimal
 from rest_framework.response import Response
+
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+
+import stripe 
+
+stripe.api_key=settings.STRIPE_SECRET_KEY
+
+def send_notification(user=None, vendor=None, order=None, order_item=None):
+    Notification.objects.create(user=user,vendor=vendor,order=order,order_item=order_item)
+
 
 
 class CategoryListAPIView(generics.ListAPIView):
@@ -149,11 +161,11 @@ class CartDetailAPIView(generics.RetrieveAPIView):
         total_total=Decimal(0.00)
         
         for cart_item in queryset:
-            total_shipping+=float(self.calculate_shipping(cart_item))
-            total_tax+=float(self.calculate_tax(cart_item))
-            total_service_fee+=float(self.calculate_service_fee(cart_item))
-            total_sub_total+=float(self.calculate_sub_total(cart_item))
-            total_total+=float(self.calculate_total(cart_item)) 
+            total_shipping+=Decimal(self.calculate_shipping(cart_item))
+            total_tax+=Decimal(self.calculate_tax(cart_item))
+            total_service_fee+=Decimal(self.calculate_service_fee(cart_item))
+            total_sub_total+=Decimal(self.calculate_sub_total(cart_item))
+            total_total+=Decimal(self.calculate_total(cart_item)) 
         
         data ={
             'shipping':total_shipping,
@@ -287,6 +299,140 @@ class CheckoutAPIView(generics.RetrieveAPIView):
         order=CartOrder.objects.get(oid=order_oid)
         return order
                 
+class CouponAPIView(generics.CreateAPIView):
+    serializer_class=CouponSerializer 
+    queryset=Coupon.objects.all()
+    permission_classes=[AllowAny]
+    
+    def create(self, request):
+        payload=request.data
+        
+        order_oid=payload['order_oid']
+        coupon_code=payload['coupon_code']
+        
+        order=CartOrder.objects.get(oid=order_oid)
+        coupon=Coupon.objects.filter(code=coupon_code).first()
+        
+        if coupon:
+            order_items=CartOrderItem.objects.filter(order=order, vendor=coupon.vendor)
+            if order_items:
+                for i in order_items:
+                    if not coupon in i.coupon.all():
+                        discount=i.total*Decimal(coupon.discount/100)
+                        i.total-=discount
+                        i.sub_total-=discount
+                        i.coupon.add(coupon)
+                        i.saved+=discount
+                        
+                        order.total-=discount
+                        order.sub_total-=discount
+                        order.saved += discount
+                        
+                        i.save()
+                        order.save()
+                        
+                        return Response({'message':"Coupon Activated Successfully","icon":"success"},status=status.HTTP_200_OK)
+                    else:
+                        return Response({'message':"Coupon Already Activated", "icon":"warning"},status=status.HTTP_200_OK)
+            else:
+                return Response({'message':"Coupon Does not Match" ,"icon":"error"},status=status.HTTP_200_OK)
+        else:
+            return Response({'message':"Coupon Does not exist" ,"icon":"error"},status=status.HTTP_200_OK)   
+       
+class StripeCheckoutView(generics.CreateAPIView):
+    serializer_class=CartOrderSerializer
+    permission_classes=[AllowAny]       
+    queryset=CartOrder.objects.all()
+    
+    def create(self,*args,**kwargs):
+        order_oid=self.kwargs.get('order_oid')
+        order=CartOrder.objects.get(oid=order_oid)
+        
+        if not order:
+            return Response({'message':'Order Not Found'},status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                customer_email=order.email,
+                payment_method_types=['card'],
+                line_items=[
+                    {
+                        'price_data': {
+                            'currency': 'usd',
+                            'product_data': {
+                                'name':order.full_name,
+                            },
+                            'unit_amount': int(order.total*100),
+                        },
+                        'quantity': 1,
+                    },
+                ],
+                mode='payment',
+                success_url='http://localhost:5173/payment-success/'+order.oid +'?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url='http://localhost:5173/payment-failed/?session_id={CHECKOUT_SESSION_ID}',
+            )
+        
+            order.stripe_session_id=checkout_session.id
+            order.save()
             
-        
-        
+            return redirect(checkout_session.url)
+        except stripe.error.StripeError as e:
+            return Response({"error":f"Something went wrong while creating checkout session: {str(e)}"},status=status.HTTP_400_BAD_REQUEST)
+
+
+class PaymentSuccessView(generics.CreateAPIView):
+    serializer_class=CartOrderSerializer
+    permission_classes=[AllowAny]       
+    queryset=CartOrder.objects.all()
+    
+    def create(self,request,*args,**kwargs):
+       payload=request.data
+       
+       order_oid= payload['order_oid']
+       session_id= payload['session_id']
+       
+       order=CartOrder.objects.get(oid=order_oid)
+       order_items=CartOrderItem.objects.filter(order=order)
+       if session_id != 'null':
+           session = stripe.checkout.Session.retrieve(session_id)
+           
+           if session.payment_status == 'paid':
+               if order.payment_status == 'pending':
+                    order.payment_status = 'paid'
+                    order.save()
+                    #send notifiation to Customer
+                    if order.buyer != None:
+                       send_notification(user=order.buyer,order=order) 
+                    #send notification to vendors
+                    for i in order_items:
+                        send_notification(vendor=i.vendor,order=order,order_item=i)
+                    #send email to buyer
+                    context={
+                        'order':order,
+                        'order_items':order_items,
+                    }
+                    subject = 'Order Placed Successfull'
+                    text_body= render_to_string('email/customer_order_confirmation.txt',context)
+                    html_body= render_to_string('email/customer_order_confirmation.html',context)
+                    
+                    msg=EmailMultiAlternatives(
+                        subject=subject,
+                        body=text_body,
+                        to=[order.email],
+                    )
+                    msg.attach_alternative(html_body,'text/html')
+                    msg.send()
+                    #send email to vendor
+                    return Response({'message':'Payment Successfull'},status=status.HTTP_200_OK)
+               else:
+                   return Response({'message':'Already Paid'},status=status.HTTP_200_OK)
+           elif session.payment_status == 'unpaid':
+               return Response({'message':'Your Invoice is Unpaid'},status=status.HTTP_200_OK)
+           elif session.payment_status == 'cancelled':
+               return Response({'message':'Your Invoice was Cancelled'},status=status.HTTP_200_OK)
+           else:
+               return Response({'message':'Something went wrong , Try Again'},status=status.HTTP_200_OK)
+       else:
+           session= None
+
+       

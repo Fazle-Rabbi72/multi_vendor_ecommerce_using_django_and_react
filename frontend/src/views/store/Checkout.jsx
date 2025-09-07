@@ -1,6 +1,47 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import apiInstance from "../../utils/axios";
+import { useNavigate, useParams } from "react-router-dom";
+import Swal from "sweetalert2";
+import { SERVER_URL } from "../../utils/constants";
 
 const Checkout = () => {
+  const [order, setOrder] = useState([]);
+  const param = useParams();
+  const [couponCode, setCouponCode] = useState("");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  const fetchOrderData = () => {
+    apiInstance.get(`checkout/${param.order_oid}/`).then((res) => {
+      setOrder(res.data);
+    });
+  };
+
+  useEffect(() => {
+    fetchOrderData();
+  }, []);
+
+  const applyCoupon = async () => {
+    const formdata = new FormData();
+    formdata.append("order_oid", order.oid);
+    formdata.append("coupon_code", couponCode);
+
+    try {
+      const response = await apiInstance.post("coupon/", formdata);
+      fetchOrderData();
+      Swal.fire({
+        icon: response.data.icon,
+        title: response.data.message,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const payWithStripe = (event) => {
+    setPaymentLoading(true);
+    event.target.form.submit();
+  };
+
   return (
     <main className="mt-5">
       <div className="container">
@@ -27,6 +68,7 @@ const Checkout = () => {
                             id="form6Example1"
                             className="form-control"
                             placeholder="Full Name"
+                            value={order.full_name}
                           />
                         </div>
                       </div>
@@ -40,6 +82,7 @@ const Checkout = () => {
                             id="form6Example1"
                             className="form-control"
                             placeholder="Email"
+                            value={order.email}
                           />
                         </div>
                       </div>
@@ -53,6 +96,7 @@ const Checkout = () => {
                             id="form6Example1"
                             className="form-control"
                             placeholder="Mobile"
+                            value={order.mobile}
                           />
                         </div>
                       </div>
@@ -69,6 +113,7 @@ const Checkout = () => {
                             id="form6Example1"
                             className="form-control"
                             placeholder="Address"
+                            value={order.address}
                           />
                         </div>
                       </div>
@@ -82,6 +127,7 @@ const Checkout = () => {
                             id="form6Example1"
                             className="form-control"
                             placeholder="City"
+                            value={order.city}
                           />
                         </div>
                       </div>
@@ -95,6 +141,7 @@ const Checkout = () => {
                             id="form6Example1"
                             className="form-control"
                             placeholder="State"
+                            value={order.state}
                           />
                         </div>
                       </div>
@@ -108,6 +155,7 @@ const Checkout = () => {
                             id="form6Example1"
                             className="form-control"
                             placeholder="Country"
+                            value={order.country}
                           />
                         </div>
                       </div>
@@ -120,31 +168,82 @@ const Checkout = () => {
                     <h5 className="mb-5">Order Summary</h5>
                     <div className="d-flex justify-content-between mb-3">
                       <span>Sub Total</span>
-                      <span>$88</span>
+                      <span>${order.sub_total}</span>
                     </div>
                     <div className="d-flex justify-content-between mb-3">
                       <span>Tax Fee</span>
-                      <span>$87</span>
+                      <span>${order.tax_fee}</span>
                     </div>
                     <div className="d-flex justify-content-between mb-3">
                       <span>Service Fee</span>
-                      <span>$86</span>
+                      <span>${order.service_fee}</span>
                     </div>
                     <div className="d-flex justify-content-between">
                       <span>Shipping</span>
-                      <span>$56</span>
+                      <span>${order.shipping_amount}</span>
                     </div>
+                    {order.saved !== "0.00" && (
+                      <div className="d-flex text-danger mt-3 fw-bold  justify-content-between">
+                        <span>Discount</span>
+                        <span>-${order.saved}</span>
+                      </div>
+                    )}
+
                     <hr className="my-4" />
                     <div className="d-flex justify-content-between fw-bold mb-5">
                       <span>Total</span>
-                      <span>$544</span>
+                      <span>${order.total}</span>
                     </div>
-                    <button type="button" className="btn btn-primary w-100">
-                      Pay With Stripe
-                      <i className="fas fa-credit-card ms-2"></i>
-                    </button>
+                    {paymentLoading === true && (
+                      <form
+                        action={`${SERVER_URL}/api/v1/stripe-checkout/${order.oid}/`}
+                      >
+                        <button
+                          onClick={payWithStripe}
+                          disabled
+                          type="button"
+                          className="btn btn-primary w-100"
+                        >
+                          Processing...
+                          <i className="fas fa-spinner fa-spin ms-2"></i>
+                        </button>
+                      </form>
+                    )}
+                    {paymentLoading === false && (
+                      <form
+                        action={`${SERVER_URL}/api/v1/stripe-checkout/${order.oid}/`} 
+                        method="POST"
+                      >
+                        <button
+                          onClick={payWithStripe}
+                          type="button"
+                          className="btn btn-primary w-100"
+                        >
+                          Pay With Stripe
+                          <i className="fas fa-credit-card ms-2"></i>
+                        </button>
+                      </form>
+                    )}
                   </section>
                   {/* end section summary */}
+                  <section className="shadow card p-4 rounded-2 mb-4">
+                    <h5>Apply Promo Code</h5>
+                    <div className="d-flex align-items-center">
+                      <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Promo Code"
+                        onChange={(e) => setCouponCode(e.target.value)}
+                      />
+                      <button
+                        onClick={applyCoupon}
+                        type="button"
+                        className="btn btn-success ms-2"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </section>
                 </div>
               </div>
             </section>
